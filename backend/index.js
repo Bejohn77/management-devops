@@ -9,7 +9,6 @@ const User = require('./models/User');
 const path = require('path');
 
 const app = express();
-connectDB();
 
 app.use(cors({ origin: true }));
 app.use(express.json());
@@ -45,16 +44,30 @@ const seedUsers = async () => {
   }
 };
 
-seedUsers().catch((error) => console.error('Seed error', error));
+const start = async () => {
+  try {
+    const dbConnected = await connectDB();
+    if (dbConnected) {
+      await seedUsers();
+    } else {
+      console.warn('Server starting without a DB connection — some routes may fail.');
+    }
 
-if (process.env.NODE_ENV === 'production') {
-  app.use(express.static(path.join(__dirname, '../frontend/dist')));
-  app.get('*', (req, res) => {
-    res.sendFile(path.join(__dirname, '../frontend/dist/index.html'));
-  });
-}
+    if (process.env.NODE_ENV === 'production') {
+      app.use(express.static(path.join(__dirname, '../frontend/dist')));
+      app.get('*', (req, res) => {
+        res.sendFile(path.join(__dirname, '../frontend/dist/index.html'));
+      });
+    }
 
-const PORT = process.env.PORT || 4000;
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
-});
+    const PORT = process.env.PORT || 4000;
+    app.listen(PORT, () => {
+      console.log(`Server running on port ${PORT}`);
+    });
+  } catch (err) {
+    console.error('Startup error', err);
+    process.exit(1);
+  }
+};
+
+start();
